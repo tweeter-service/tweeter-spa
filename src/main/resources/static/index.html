@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tweeter</title>
+</head>
+<body>
+<div>
+    <p id="message">Loading...</p>
+    <button id="reload" onclick="reloadTweet();">Reload</button>
+    <div id="tweets"></div>
+</div>
+<script>
+    var authorizaionUrl = 'http://localhost:9999/uaa';
+    var tweeterApiUrl = 'http://localhost:8082/v1';
+    var clientId = 'demo';
+
+    var TweeterApp = function (location) {
+        this.params = this.paramsFromHash(location.hash);
+    };
+
+    TweeterApp.prototype.checkToken = function (location) {
+        if (!(this.params && this.params.access_token)) {
+            // redirect
+            var redirectUri = location.href;
+            location.href = authorizaionUrl + '/oauth/authorize?client_id=' + clientId + '&response_type=token&redirect_uri=' + redirectUri;
+            return false;
+        } else {
+            // Remove hash
+            location.hash = '';
+            return true;
+        }
+    };
+
+    TweeterApp.prototype.accessToken = function () {
+        return this.params.access_token;
+    };
+
+    TweeterApp.prototype.userinfo = function () {
+        return this.httpGet(authorizaionUrl + '/userinfo');
+    };
+
+    TweeterApp.prototype.tweets = function () {
+        return this.httpGet(tweeterApiUrl + '/tweets');
+    };
+
+    TweeterApp.prototype.httpGet = function (url) {
+        return new Promise(function (resolve, reject) {
+            var r = new XMLHttpRequest();
+            r.open('GET', url, true);
+            r.setRequestHeader('Authorization', 'Bearer ' + this.accessToken());
+            r.onreadystatechange = function () {
+                if (r.readyState === 4) {
+                    if (r.status !== 200) {
+                        console.error(r);
+                        reject(r);
+                    } else {
+                        resolve(JSON.parse(r.responseText));
+                    }
+                }
+            };
+            r.send();
+        }.bind(this));
+    };
+
+    TweeterApp.prototype.paramsFromHash = function (hash) {
+        hash = hash.charAt(0) === '#' ? hash.substring(1) : hash;
+        var params = {},
+            regex = /([^&=]+)=([^&]*)/g,
+            m;
+        while ((m = regex.exec(hash)) !== null) {
+            params[decodeURIComponent(m[1])] = decodeURIComponent(m[2]);
+        }
+        if (params.access_token || params.error) {
+            return params;
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        window.app = new TweeterApp(location);
+        if (!window.app.checkToken(location)) {
+            return;
+        }
+        // Load
+        window.app.userinfo()
+            .then(function (user) {
+                console.log(user);
+                document.getElementById('message').innerText = 'Hello ' + user.firstName + ' ' + user.lastName + '!';
+            });
+        var loadTweets = function () {
+            window.app.tweets()
+                .then(function (tweets) {
+                    var list = tweets.map(function (t) {
+                        return '<li>' + t.text + '</li>';
+                    }).join('');
+                    document.getElementById('tweets').innerHTML = '<ul>' + list + '</ul>';
+                })
+        };
+        loadTweets();
+        document.getElementById('reload').onclick = loadTweets;
+    });
+</script>
+</body>
+</html>
