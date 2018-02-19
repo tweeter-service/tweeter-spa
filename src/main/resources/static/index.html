@@ -11,9 +11,9 @@
     <div id="tweets"></div>
 </div>
 <script>
-    var authorizaionUrl = 'http://localhost:9999/uaa';
+    var authorizaionUrl = 'https://dev-306510.oktapreview.com/oauth2/default';
     var tweeterApiUrl = 'http://localhost:8082/v1';
-    var clientId = 'demo';
+    var clientId = '0oae2ex77sXZPjkeA0h7';
 
     var TweeterApp = function (location) {
         this.params = this.paramsFromHash(location.hash);
@@ -23,7 +23,7 @@
         if (!(this.params && this.params.access_token)) {
             // redirect
             var redirectUri = location.href;
-            location.href = authorizaionUrl + '/oauth/authorize?client_id=' + clientId + '&response_type=token&redirect_uri=' + redirectUri;
+            location.href = authorizaionUrl + '/v1/authorize?client_id=' + clientId + '&response_type=token&nonce=random&state=random&scope=openid tweet.read tweet.write&redirect_uri=' + redirectUri;
             return false;
         } else {
             // Remove hash
@@ -37,7 +37,7 @@
     };
 
     TweeterApp.prototype.userinfo = function () {
-        return this.httpGet(authorizaionUrl + '/userinfo');
+        return this.httpGet(authorizaionUrl + '/v1/userinfo');
     };
 
     TweeterApp.prototype.tweets = function () {
