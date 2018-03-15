@@ -15,6 +15,15 @@
     var tweeterApiUrl = 'http://localhost:8082/v1';
     var clientId = '0oae2ex77sXZPjkeA0h7';
 
+    var Base64 = {
+        encode: function (str) {
+            return btoa(unescape(encodeURIComponent(str)));
+        },
+        decode: function (str) {
+            return decodeURIComponent(escape(atob(str)));
+        }
+    };
+
     var TweeterApp = function (location) {
         this.params = this.paramsFromHash(location.hash);
     };
@@ -23,7 +32,7 @@
         if (!(this.params && this.params.access_token)) {
             // redirect
             var redirectUri = location.href;
-            location.href = authorizaionUrl + '/v1/authorize?client_id=' + clientId + '&response_type=token&nonce=random&state=random&scope=openid tweet.read tweet.write&redirect_uri=' + redirectUri;
+            location.href = authorizaionUrl + '/v1/authorize?client_id=' + clientId + '&response_type=token id_token&nonce=random&state=random&scope=openid profile&redirect_uri=' + redirectUri;
             return false;
         } else {
             // Remove hash
@@ -37,7 +46,9 @@
     };
 
     TweeterApp.prototype.userinfo = function () {
-        return this.httpGet(authorizaionUrl + '/v1/userinfo');
+        var idToken = this.params.id_token;
+        var payload = Base64.decode(idToken.split(".")[1]);
+        return Promise.resolve(JSON.parse(payload));
     };
 
     TweeterApp.prototype.tweets = function () {
@@ -85,7 +96,7 @@
         window.app.userinfo()
             .then(function (user) {
                 console.log(user);
-                document.getElementById('message').innerText = 'Hello ' + user.firstName + ' ' + user.lastName + '!';
+                document.getElementById('message').innerText = 'Hello ' + user.name + '!';
             });
         var loadTweets = function () {
             window.app.tweets()
